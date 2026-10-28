@@ -52,7 +52,7 @@ canvas#scr{position:relative;z-index:1;display:block;width:100%;aspect-ratio:4/3
 video{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12px);object-fit:cover;z-index:0;pointer-events:none}
 .key.err{background:var(--orange);color:#fff}
 .meters{display:grid;gap:6px}
-.meter{display:grid;grid-template-columns:62px 1fr 62px;align-items:center;gap:8px;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.meter{display:grid;grid-template-columns:86px 1fr 44px;align-items:center;gap:8px;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
 .meter .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
 .bar{height:12px;background:#dcdcd7;border-radius:3px;position:relative;overflow:hidden;box-shadow:inset 0 1px 1px rgba(0,0,0,.12)}
 .bar i{position:absolute;inset:0 auto 0 0;width:30%;background:var(--c)}
@@ -102,7 +102,7 @@ video{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12p
 <main class="device">
   <header class="hdr">
     <div class="logo">TX-303<sup>M</sup></div>
-    <div class="meta"><b>Mouth acid synthesizer</b><br>bass line · drum machine · face sensor</div>
+    <div class="meta"><b>Mouth acid synthesizer</b><br>acid line · drum machine · mouth choir</div>
     <div class="led" id="led"></div>
   </header>
 
@@ -115,11 +115,11 @@ video{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12p
   </section>
 
   <section class="mod">
-    <div class="lbl"><span>02 · mouth → 303</span><span id="src">face: —</span></div>
+    <div class="lbl"><span>02 · mouth → voice</span><span id="src">face: —</span></div>
     <div class="meters">
-      <div class="meter" style="--c:var(--orange)"><span>jaw→cut</span><div class="bar"><i id="m0"></i></div><span class="v" id="v0">—</span></div>
-      <div class="meter" style="--c:var(--blue)"><span>pout→res</span><div class="bar"><i id="m1"></i></div><span class="v" id="v1">—</span></div>
-      <div class="meter" style="--c:var(--green)"><span>smile→env</span><div class="bar"><i id="m2"></i></div><span class="v" id="v2">—</span></div>
+      <div class="meter" style="--c:var(--orange)"><span>head→pitch</span><div class="bar"><i id="m0"></i></div><span class="v" id="v0">—</span></div>
+      <div class="meter" style="--c:var(--blue)"><span>shape→vowel</span><div class="bar"><i id="m1"></i></div><span class="v" id="v1">—</span></div>
+      <div class="meter" style="--c:var(--green)"><span>open→voice</span><div class="bar"><i id="m2"></i></div><span class="v" id="v2">—</span></div>
     </div>
   </section>
 
@@ -127,9 +127,9 @@ video{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12p
     <div class="lbl"><span>03 · control</span><span>drag ↕</span></div>
     <div class="knobs">
       <div class="k white" tabindex="0" data-p="bpm" id="k-bpm"><span class="val"></span><div class="dial"></div><span class="cap">tempo</span></div>
-      <div class="k blue" tabindex="0" data-p="decay" id="k-decay"><span class="val"></span><div class="dial"></div><span class="cap">decay</span></div>
+      <div class="k blue" tabindex="0" data-p="acid" id="k-acid"><span class="val"></span><div class="dial"></div><span class="cap">acid</span></div>
       <div class="k orange" tabindex="0" data-p="drive" id="k-drive"><span class="val"></span><div class="dial"></div><span class="cap">drive</span></div>
-      <div class="k green" tabindex="0" data-p="delay" id="k-delay"><span class="val"></span><div class="dial"></div><span class="cap">delay</span></div>
+      <div class="k green" tabindex="0" data-p="echo" id="k-echo"><span class="val"></span><div class="dial"></div><span class="cap">echo</span></div>
     </div>
   </section>
 
@@ -154,9 +154,9 @@ video{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12p
   </section>
 
   <section class="legend">
-    <div style="--c:var(--orange)"><b>open wide</b>filter opens, the wah</div>
-    <div style="--c:var(--blue)"><b>pout / ooh</b>resonance squelch</div>
-    <div style="--c:var(--green)"><b>smile</b>envelope snap</div>
+    <div style="--c:var(--orange)"><b>head up / down</b>sing higher or lower, always in key</div>
+    <div style="--c:var(--blue)"><b>open · pout · smile</b>ah · oo · ee</div>
+    <div style="--c:var(--green)"><b>close mouth</b>voice stops, echo rings on</div>
   </section>
 
   <footer class="foot"><span>face the camera, good light, mouth in frame</span><span>iphone silent? flip the mute switch</span></footer>
@@ -169,18 +169,59 @@ const lerp = (a, b, t) => a + (b - a) * t;
 
 /* ---------- state ---------- */
 const S = {
-  cut: .35, res: .6, env: .5,          // smoothed, driven by mouth
-  tCut: .35, tRes: .6, tEnv: .5,       // targets
-  bpm: 132, decay: .4, drive: .45, delay: .3,
-  playing: false, drums: true, wave: 'sawtooth', source: 'touch', face: false,
+  bpm: 132, acid: .5, drive: .45, echo: .55,
+  playing: false, drums: true, wave: 'sawtooth', face: false,
+  // voice targets (from mouth) and smoothed values
+  open: 0, round: 0, spread: 0, vol: 0, tVol: 0, pitchPos: .5, panX: 0,
+  note: 4, held: 0,
+  cut303: .4,
 };
 const KNOB = {
   bpm:   { min: 90, max: 160, fmt: v => Math.round(v) },
-  decay: { min: 0, max: 1, fmt: v => Math.round(v * 99) },
+  acid:  { min: 0, max: 1, fmt: v => Math.round(v * 99) },
   drive: { min: 0, max: 1, fmt: v => Math.round(v * 99) },
-  delay: { min: 0, max: 1, fmt: v => Math.round(v * 99) },
+  echo:  { min: 0, max: 1, fmt: v => Math.round(v * 99) },
 };
-const cutHz = c => 70 * Math.pow(60, c);   // 70 Hz → 4.2 kHz
+const cutHz = c => 70 * Math.pow(60, c);
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+
+/* voice scale: A minor pentatonic, same key as the acid line */
+const VOX_NOTES = [
+  { m: 45, n: 'A2' }, { m: 48, n: 'C3' }, { m: 50, n: 'D3' }, { m: 52, n: 'E3' }, { m: 55, n: 'G3' },
+  { m: 57, n: 'A3' }, { m: 60, n: 'C4' }, { m: 62, n: 'D4' }, { m: 64, n: 'E4' },
+];
+const PITCH_TOP = .26, PITCH_BOT = .74;   // mouth height range in the camera frame
+
+/* bass-voice formants: freq, linear amp, bandwidth */
+const db = d => Math.pow(10, d / 20);
+const VOWELS = {
+  a: { f: [600, 1040, 2250, 2450, 2750], a: [0, -7, -9, -9, -20].map(db), b: [60, 70, 110, 120, 130] },
+  e: { f: [400, 1620, 2400, 2800, 3100], a: [0, -12, -9, -12, -18].map(db), b: [40, 80, 100, 120, 120] },
+  i: { f: [250, 1750, 2600, 3050, 3340], a: [0, -30, -16, -22, -28].map(db), b: [60, 90, 100, 120, 120] },
+  o: { f: [400, 750, 2400, 2600, 2900], a: [0, -11, -21, -20, -40].map(db), b: [40, 80, 100, 120, 120] },
+  u: { f: [350, 600, 2400, 2675, 2950], a: [0, -20, -32, -28, -36].map(db), b: [40, 80, 100, 120, 120] },
+};
+const VLABEL = { a: 'AH', e: 'EH', i: 'EE', o: 'OH', u: 'OO' };
+function vowelWeights(open, round, spread) {
+  const w = {
+    a: open * (1 - round),
+    o: open * round,
+    u: (1 - open) * round,
+    i: (1 - open) * spread * (1 - round),
+    e: (1 - open) * (1 - spread) * (1 - round) * .6 + .02,
+  };
+  let t = 0; for (const k in w) t += w[k];
+  for (const k in w) w[k] /= t;
+  return w;
+}
+function blendVowel(w) {
+  const out = { f: [0, 0, 0, 0, 0], a: [0, 0, 0, 0, 0], b: [0, 0, 0, 0, 0] };
+  for (const k in w) for (let i = 0; i < 5; i++) {
+    out.f[i] += VOWELS[k].f[i] * w[k]; out.a[i] += VOWELS[k].a[i] * w[k]; out.b[i] += VOWELS[k].b[i] * w[k];
+  }
+  return out;
+}
+function topVowel(w) { let best = 'e'; for (const k in w) if (w[k] > w[best]) best = k; return best; }
 
 /* ---------- pattern ---------- */
 const NAMES = ['A','A#','B','C','C#','D','D#','E','F','F#','G','G#'];
@@ -216,14 +257,48 @@ function renderSteps() {
 genPattern();
 
 /* ---------- audio ---------- */
-let ac, osc, f1, f2, vca, envSrc, duck, pre, shaper, post, sendG, dly, fbG, fbF, drumBus, comp, analyser, noiseBuf;
+let ac, comp, analyser, noiseBuf, drumBus;
+let osc, f1, f2, vca, envSrc, duck, pre, shaper, post, acidSend;
+let echoIn, dA, dB, echoFb, echoTone, revSend, voxSend;
+let vOsc = [], vib, vibDepth, vSrc, breathG, forms = [], formGains = [], formSum, voxVca, voxPan;
+
 function curve(k) {
   const n = 1024, c = new Float32Array(n);
   for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * k) / Math.tanh(k); }
   return c;
 }
+function impulse(sec, decay) {
+  const len = Math.floor(ac.sampleRate * sec), b = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = b.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+  }
+  return b;
+}
 function initAudio() {
   ac = new (window.AudioContext || window.webkitAudioContext)();
+  comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = .004; comp.release.value = .14;
+  const master = ac.createGain(); master.gain.value = .85;
+  analyser = ac.createAnalyser(); analyser.fftSize = 1024;
+  comp.connect(master).connect(analyser).connect(ac.destination);
+
+  noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+  const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+  /* --- ping-pong echo + hall, shared --- */
+  echoIn = ac.createGain();
+  dA = ac.createDelay(2); dB = ac.createDelay(2);
+  echoFb = ac.createGain(); echoTone = ac.createBiquadFilter(); echoTone.type = 'lowpass'; echoTone.frequency.value = 2600;
+  const pL = ac.createStereoPanner(), pR = ac.createStereoPanner(); pL.pan.value = -.85; pR.pan.value = .85;
+  echoIn.connect(dA); dA.connect(dB); dB.connect(echoTone).connect(echoFb).connect(dA);
+  dA.connect(pL).connect(comp); dB.connect(pR).connect(comp);
+  const rev = ac.createConvolver(); rev.buffer = impulse(3.2, 2.6);
+  revSend = ac.createGain(); const revOut = ac.createGain(); revOut.gain.value = .9;
+  revSend.connect(rev).connect(revOut).connect(comp);
+  dA.connect(revSend);  // echoes bloom into the hall
+
+  /* --- 303 --- */
   osc = ac.createOscillator(); osc.type = S.wave; osc.frequency.value = 110;
   f1 = ac.createBiquadFilter(); f1.type = 'lowpass'; f1.Q.value = .7;
   f2 = ac.createBiquadFilter(); f2.type = 'lowpass';
@@ -231,36 +306,56 @@ function initAudio() {
   envSrc.connect(f1.frequency); envSrc.connect(f2.frequency); envSrc.start();
   vca = ac.createGain(); vca.gain.value = 0;
   duck = ac.createGain(); duck.gain.value = 1;
-  pre = ac.createGain();
-  shaper = ac.createWaveShaper(); shaper.oversample = '2x';
-  post = ac.createGain();
-  osc.connect(f1).connect(f2).connect(vca).connect(pre).connect(shaper).connect(post).connect(duck);
-
-  dly = ac.createDelay(2); fbG = ac.createGain(); fbG.gain.value = .42;
-  fbF = ac.createBiquadFilter(); fbF.type = 'lowpass'; fbF.frequency.value = 2200;
-  sendG = ac.createGain();
-  duck.connect(sendG).connect(dly); dly.connect(fbF).connect(fbG).connect(dly);
-
-  drumBus = ac.createGain(); drumBus.gain.value = .9;
-  comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = .004; comp.release.value = .12;
-  const master = ac.createGain(); master.gain.value = .85;
-  analyser = ac.createAnalyser(); analyser.fftSize = 1024;
-  duck.connect(comp); fbF.connect(comp); drumBus.connect(comp);
-  comp.connect(master).connect(analyser).connect(ac.destination);
-
-  noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
-  const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  pre = ac.createGain(); shaper = ac.createWaveShaper(); shaper.oversample = '2x'; post = ac.createGain();
+  const acidLevel = ac.createGain(); acidLevel.gain.value = .7;
+  osc.connect(f1).connect(f2).connect(vca).connect(pre).connect(shaper).connect(post).connect(duck).connect(acidLevel).connect(comp);
+  acidSend = ac.createGain(); acidSend.gain.value = .12; acidLevel.connect(acidSend).connect(echoIn);
   osc.start();
+
+  /* --- drums --- */
+  drumBus = ac.createGain(); drumBus.gain.value = .9; drumBus.connect(comp);
+
+  /* --- mouth voice: glottal saws → 5 formant bands → VCA → pan → dry / echo / hall --- */
+  vSrc = ac.createGain(); vSrc.gain.value = .5;
+  vib = ac.createOscillator(); vib.frequency.value = 5.3; vibDepth = ac.createGain(); vibDepth.gain.value = 8;
+  vib.connect(vibDepth);
+  [[ 'sawtooth', 0, .5], ['sawtooth', 9, .4], ['triangle', -1200, .35]].forEach(([type, det, g]) => {
+    const o = ac.createOscillator(); o.type = type; o.detune.value = det; o.frequency.value = mtof(57);
+    const og = ac.createGain(); og.gain.value = g;
+    vibDepth.connect(o.detune); o.connect(og).connect(vSrc); o.start(); vOsc.push(o);
+  });
+  vib.start();
+  const breath = ac.createBufferSource(); breath.buffer = noiseBuf; breath.loop = true;
+  const bf = ac.createBiquadFilter(); bf.type = 'highpass'; bf.frequency.value = 900;
+  breathG = ac.createGain(); breathG.gain.value = .04;
+  breath.connect(bf).connect(breathG).connect(vSrc); breath.start();
+  formSum = ac.createGain(); formSum.gain.value = 5.5;
+  const v0 = VOWELS.e;
+  for (let i = 0; i < 5; i++) {
+    const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = v0.f[i]; f.Q.value = v0.f[i] / v0.b[i];
+    const g = ac.createGain(); g.gain.value = v0.a[i];
+    vSrc.connect(f).connect(g).connect(formSum); forms.push(f); formGains.push(g);
+  }
+  voxVca = ac.createGain(); voxVca.gain.value = 0;
+  voxPan = ac.createStereoPanner();
+  formSum.connect(voxVca).connect(voxPan).connect(comp);
+  voxSend = ac.createGain(); voxPan.connect(voxSend).connect(echoIn);
+  const voxRev = ac.createGain(); voxRev.gain.value = .35; voxPan.connect(voxRev).connect(revSend);
+
   applyKnobs();
 }
 function applyKnobs() {
   if (!ac) return;
-  const k = 1 + S.drive * 9;
-  shaper.curve = curve(k);
+  const t = ac.currentTime;
+  shaper.curve = curve(1 + S.drive * 9);
   pre.gain.value = .6 + S.drive * 1.6;
   post.gain.value = .5 / (.6 + S.drive * .7);
-  sendG.gain.setTargetAtTime(S.delay * .7, ac.currentTime, .05);
-  dly.delayTime.setTargetAtTime(60 / S.bpm * .75, ac.currentTime, .05);
+  const beat = 60 / S.bpm;
+  dA.delayTime.setTargetAtTime(beat * .75, t, .05);
+  dB.delayTime.setTargetAtTime(beat * .75, t, .05);
+  echoFb.gain.setTargetAtTime(.25 + S.echo * .5, t, .05);
+  voxSend.gain.setTargetAtTime(.2 + S.echo * .8, t, .05);
+  revSend.gain.setTargetAtTime(.3 + S.echo * .6, t, .05);
 }
 
 /* drums */
@@ -290,26 +385,26 @@ function drums(i, t) {
   else if (i % 2 === 1) noiseHit(t, 'highpass', 9000, .7, .16, .03);
 }
 
-/* scheduler */
+/* 303 sequencer: filter sweeps itself, ACID knob sets where it sits */
 let nextT = 0, sStep = 0, tick = null;
 const queue = [];
-function spb() { return 60 / S.bpm / 4; }
+const spb = () => 60 / S.bpm / 4;
+function acidEnv() { return .35 + .3 * Math.sin(ac.currentTime * 2 * Math.PI / (60 / S.bpm * 4 * 12)); }
 function scheduleStep(i, t) {
   const s = pattern[i], prev = pattern[(i + 15) % 16];
   if (S.drums) drums(i, t);
   queue.push({ i, t });
   if (s.rest) { vca.gain.setTargetAtTime(0, t, .006); return; }
-  const f = 440 * Math.pow(2, (45 + s.n + s.oct - 69) / 12);  // root A2
+  const f = mtof(45 + s.n + s.oct);
   const sliding = prev.slide && !prev.rest;
-  if (sliding) osc.frequency.setTargetAtTime(f, t, .028);
-  else osc.frequency.setValueAtTime(f, t);
+  if (sliding) osc.frequency.setTargetAtTime(f, t, .028); else osc.frequency.setValueAtTime(f, t);
   const peak = s.acc ? .95 : .62;
   vca.gain.setTargetAtTime(peak, t, .002);
   vca.gain.setTargetAtTime(peak * .7, t + .01, .2);
   if (!s.slide) vca.gain.setTargetAtTime(0, t + spb() * .62, .01);
   if (!sliding) {
-    const amt = (250 + S.env * 5200) * (s.acc ? 1.7 : 1);
-    const dec = s.acc ? .06 + S.decay * .18 : .05 + S.decay * .85;
+    const amt = (250 + acidEnv() * 5200) * (s.acc ? 1.7 : 1);
+    const dec = s.acc ? .12 : .4;
     envSrc.offset.cancelScheduledValues(t);
     envSrc.offset.setTargetAtTime(amt, t, .0015);
     envSrc.offset.setTargetAtTime(0, t + .005, dec / 3);
@@ -318,13 +413,16 @@ function scheduleStep(i, t) {
 function scheduler() {
   while (nextT < ac.currentTime + .12) {
     scheduleStep(sStep, nextT);
-    const sw = .06; nextT += spb() * (sStep % 2 ? 1 - sw : 1 + sw);
+    nextT += spb() * (sStep % 2 ? .94 : 1.06);
     sStep = (sStep + 1) % 16;
   }
 }
-async function togglePlay() {
+async function ensureAudio() {
   if (!ac) initAudio();
   if (ac.state !== 'running') { try { await ac.resume(); } catch (e) {} }
+}
+async function togglePlay() {
+  await ensureAudio();
   S.playing = !S.playing;
   if (S.playing) { sStep = 0; nextT = ac.currentTime + .06; tick = setInterval(scheduler, 25); scheduler(); }
   else { clearInterval(tick); vca.gain.setTargetAtTime(0, ac.currentTime, .01); queue.length = 0; curStep = -1; markStep(); }
@@ -344,7 +442,7 @@ $('#b-wave').onclick = () => {
   $('#t-wave').textContent = S.wave === 'sawtooth' ? 'SAW' : 'SQR';
   $('#ico-wave').innerHTML = S.wave === 'sawtooth' ? '<path d="M2 18L10 6v12l8-12v12"/>' : '<path d="M2 18h4V6h6v12h6V6h4"/>';
 };
-$('#b-cam').onclick = startCam;
+$('#b-cam').onclick = () => { startCam(); ensureAudio(); };
 
 document.querySelectorAll('.k').forEach(el => {
   const p = el.dataset.p, K = KNOB[p];
@@ -374,9 +472,7 @@ function resize() {
   cx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 addEventListener('resize', resize); resize();
-
-/* tap the screen: start camera + sound together */
-cv.addEventListener('click', () => { if (!camLive) startCam(); if (!S.playing) togglePlay(); });
+cv.addEventListener('click', () => { if (!camLive) startCam(); if (!S.playing) togglePlay(); else ensureAudio(); });
 
 /* ---------- mouth tracking ---------- */
 const vid = $('#vid');
@@ -388,8 +484,8 @@ const INNER = [78,95,88,178,87,14,317,402,318,324,308,415,310,311,312,13,82,81,8
 const VER = '0.10.14';
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 const status = t => $('#status').textContent = t;
-
 const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+
 function camError(title, fix) {
   camErr = { title, fix }; status(title);
   $('#b-cam').classList.remove('on'); $('#b-cam').classList.add('err'); $('#t-cam').textContent = 'RETRY';
@@ -411,9 +507,9 @@ async function startCam() {
   $('#b-cam').classList.remove('err'); $('#b-cam').classList.add('on'); $('#t-cam').textContent = 'CAM';
   try {
     if (!window.isSecureContext) return camError('camera needs https', 'Open this page from an https:// address, not a downloaded file.');
-    if (!navigator.mediaDevices?.getUserMedia) return camError('camera not available', framed ? 'This viewer blocks the camera. Open the hosted page directly in Safari or Chrome.' : 'This browser has no camera access. Try Safari or Chrome.');
+    if (!navigator.mediaDevices?.getUserMedia) return camError('camera not available', framed ? 'This viewer blocks the camera. Open swwilshub.github.io/tx303 in Chrome or Safari.' : 'This browser has no camera access. Try Chrome or Safari.');
     status('asking for camera…');
-    const model = loadModel();               // download the face model while the permission prompt is up
+    const model = loadModel();
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
@@ -421,8 +517,8 @@ async function startCam() {
       const n = e && e.name;
       if (n === 'NotAllowedError' || n === 'SecurityError') {
         return framed
-          ? camError('camera blocked by this viewer', 'Embedded pages cannot use the camera. Open the hosted page directly in Safari or Chrome.')
-          : camError('camera permission denied', 'Allow camera for this site: tap aA or the lock icon in the address bar, set Camera to Allow, then tap RETRY.');
+          ? camError('camera blocked by this viewer', 'Embedded pages cannot use the camera. Open swwilshub.github.io/tx303 in Chrome or Safari.')
+          : camError('camera permission denied', 'Tap the icon left of the address, set Camera to Allow, then tap RETRY.');
       }
       if (n === 'NotFoundError' || n === 'OverconstrainedError') return camError('no front camera found', 'This device has no usable camera.');
       if (n === 'NotReadableError') return camError('camera busy', 'Another app is using the camera. Close it, then tap RETRY.');
@@ -434,78 +530,105 @@ async function startCam() {
     status('loading face model…');
     try { landmarker = await model; }
     catch (e) { return camError('face model failed to load', 'Check your connection, then tap RETRY.'); }
-    status('show me your mouth');
+    status('open your mouth to sing');
   } finally { camBusy = false; }
 }
 
-function coverMap() {
-  const vw = vid.videoWidth || 4, vh = vid.videoHeight || 3;
-  const sc = Math.max(W / vw, H / vh);
-  return { vw, vh, sc, dx: (W - vw * sc) / 2, dy: (H - vh * sc) / 2 };
-}
-function toScreen(p, m) { return { x: W - (p.x * m.vw * m.sc + m.dx), y: p.y * m.vh * m.sc + m.dy }; }
-
+let vw = { a: 0, e: 1, i: 0, o: 0, u: 0 };
 function track() {
   if (!landmarker || vid.readyState < 2 || vid.currentTime === lastVT) return;
   lastVT = vid.currentTime;
   const r = landmarker.detectForVideo(vid, performance.now());
   const bs = r.faceBlendshapes?.[0]?.categories;
   if (!bs || !r.faceLandmarks?.[0]) {
-    if (S.face) status('looking for your face…');
-    S.face = false; lips = null; S.tCut = .12; S.tRes = .4; S.tEnv = .3;   // no face = mouth closed
-    $('#src').textContent = 'face: searching'; return;
+    if (S.face) { status('looking for your face…'); $('#src').textContent = 'face: searching'; }
+    S.face = false; lips = null; S.tVol = 0; return;
   }
-  if (!S.face) { status('mouth locked'); $('#src').textContent = 'face: locked'; }
+  if (!S.face) { status('mouth locked · sing'); $('#src').textContent = 'face: locked'; }
+  S.face = true;
   const g = n => bs.find(c => c.categoryName === n)?.score || 0;
   const jaw = g('jawOpen'), pucker = g('mouthPucker'), funnel = g('mouthFunnel');
   const smile = (g('mouthSmileLeft') + g('mouthSmileRight')) / 2;
-  S.face = true;
-  S.tCut = clamp((jaw - .02) / .5);
-  S.tRes = clamp(.25 + pucker * 1.0 + funnel * .6);
-  S.tEnv = clamp(.15 + smile * 1.3);
+  const open = clamp((jaw - .04) / .45), round = clamp(pucker * 1.3 + funnel * .9), spread = clamp(smile * 1.8);
+  S.open = lerp(S.open, open, .4); S.round = lerp(S.round, round, .4); S.spread = lerp(S.spread, spread, .4);
+  // sing while lips are apart: open jaw or an "oo" funnel
+  S.tVol = clamp((jaw - .06) / .18 + funnel * 1.2);
   lips = r.faceLandmarks[0];
+  const my = (lips[13].y + lips[14].y) / 2, mx = (lips[13].x + lips[14].x) / 2;
+  S.pitchPos = lerp(S.pitchPos, clamp((PITCH_BOT - my) / (PITCH_BOT - PITCH_TOP)), .5);
+  S.panX = lerp(S.panX, clamp((.5 - mx) * 2.2, -1, 1), .3);   // mirrored: lean right → pan right
+  // quantise with hysteresis so notes don't flutter
+  const idxF = S.pitchPos * (VOX_NOTES.length - 1);
+  if (Math.abs(idxF - S.note) > .62) S.note = Math.round(idxF);
 }
 
 /* ---------- render loop ---------- */
-let curStep = -1, phase = 0;
+let curStep = -1, phase = 0, lastNote = -1, noteT = 0, lastFrame = 0;
 const wave = new Uint8Array(1024);
 function markStep() {
   document.querySelectorAll('.st.now').forEach(e => e.classList.remove('now'));
   if (curStep >= 0) $('#st' + curStep)?.classList.add('now');
 }
-function fmtHz(h) { return h >= 1000 ? (h / 1000).toFixed(1) + 'k' : Math.round(h) + ''; }
+const fmtHz = h => h >= 1000 ? (h / 1000).toFixed(1) + 'k' : Math.round(h) + '';
 
 function frame(now) {
   requestAnimationFrame(frame);
+  const dt = Math.min(.1, (now - lastFrame) / 1000 || .016); lastFrame = now;
   track();
-  // smoothing
-  const k = S.face ? .35 : .18;
-  S.cut = lerp(S.cut, S.tCut, k); S.res = lerp(S.res, S.tRes, k); S.env = lerp(S.env, S.tEnv, k);
+  S.vol = lerp(S.vol, S.tVol, .35);
+  vw = vowelWeights(S.open, S.round, S.spread);
+  const V = blendVowel(vw);
+  if (S.note !== lastNote) { lastNote = S.note; noteT = 0; } else noteT += dt;
   if (ac) {
     const t = ac.currentTime;
-    f1.frequency.setTargetAtTime(cutHz(S.cut), t, .02);
-    f2.frequency.setTargetAtTime(cutHz(S.cut), t, .02);
-    f2.Q.setTargetAtTime(.8 + S.res * 17, t, .03);
+    // 303 filter drifts on its own around the ACID knob
+    const sweep = Math.sin(t * 2 * Math.PI / (60 / S.bpm * 4 * 8));
+    S.cut303 = clamp(.12 + S.acid * .6 + sweep * .18);
+    f1.frequency.setTargetAtTime(cutHz(S.cut303), t, .03);
+    f2.frequency.setTargetAtTime(cutHz(S.cut303), t, .03);
+    f2.Q.setTargetAtTime(9 + S.acid * 7, t, .05);
+    // voice
+    const f0 = mtof(VOX_NOTES[S.note].m);
+    vOsc.forEach(o => o.frequency.setTargetAtTime(f0, t, .045));
+    vibDepth.gain.setTargetAtTime(6 + 22 * clamp(noteT / .7), t, .1);    // vibrato blooms on held notes
+    for (let i = 0; i < 5; i++) {
+      forms[i].frequency.setTargetAtTime(V.f[i], t, .035);
+      forms[i].Q.setTargetAtTime(V.f[i] / V.b[i], t, .035);
+      formGains[i].gain.setTargetAtTime(V.a[i], t, .035);
+    }
+    voxVca.gain.setTargetAtTime(S.vol * .9, t, .03);
+    breathG.gain.setTargetAtTime(.02 + S.vol * .03, t, .05);
+    voxPan.pan.setTargetAtTime(S.panX * .6, t, .08);
     while (queue.length && queue[0].t <= t) { curStep = queue.shift().i; markStep(); }
   }
   // meters
-  $('#m0').style.width = S.cut * 100 + '%'; $('#v0').textContent = fmtHz(cutHz(S.cut)) + 'Hz';
-  $('#m1').style.width = S.res * 100 + '%'; $('#v1').textContent = 'Q' + (.8 + S.res * 17).toFixed(1);
-  $('#m2').style.width = S.env * 100 + '%'; $('#v2').textContent = Math.round(S.env * 100) + '%';
-  draw(now);
+  $('#m0').style.width = S.pitchPos * 100 + '%'; $('#v0').textContent = VOX_NOTES[S.note].n;
+  $('#m1').style.width = (vw.a * 100 + vw.o * 75 + vw.e * 50 + vw.u * 25 + vw.i * 5) + '%'; $('#v1').textContent = VLABEL[topVowel(vw)];
+  $('#m2').style.width = S.vol * 100 + '%'; $('#v2').textContent = Math.round(S.vol * 100) + '%';
+  draw();
 }
 
-function draw(now) {
+function noteScreenY(i, m) {
+  const y = PITCH_BOT - (i / (VOX_NOTES.length - 1)) * (PITCH_BOT - PITCH_TOP);
+  return toScreen({ x: .5, y }, m).y;
+}
+function coverMap() {
+  const vw0 = vid.videoWidth || 4, vh0 = vid.videoHeight || 3;
+  const sc = Math.max(W / vw0, H / vh0);
+  return { vw: vw0, vh: vh0, sc, dx: (W - vw0 * sc) / 2, dy: (H - vh0 * sc) / 2 };
+}
+function toScreen(p, m) { return { x: W - (p.x * m.vw * m.sc + m.dx), y: p.y * m.vh * m.sc + m.dy }; }
+
+function draw() {
   cx.fillStyle = '#0a0a0a'; cx.fillRect(0, 0, W, H);
   const camOn = camLive && vid.readyState >= 2;
-  // dot-matrix camera
   if (camOn) {
     const m = coverMap();
-    const cw = W / m.sc, ch = H / m.sc;  // crop in video px
+    const cw = W / m.sc, ch = H / m.sc;
     sx.drawImage(vid, (m.vw - cw) / 2, (m.vh - ch) / 2, cw, ch, 0, 0, small.width, small.height);
     const px = sx.getImageData(0, 0, small.width, small.height).data;
     const cs = W / small.width;
-    cx.fillStyle = '#e9e9e4';
+    cx.fillStyle = '#5c5c58';
     for (let y = 0; y < small.height; y++) for (let x = 0; x < small.width; x++) {
       const i = (y * small.width + x) * 4;
       const l = (px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11) / 255;
@@ -513,27 +636,42 @@ function draw(now) {
       if (rad < .35) continue;
       cx.beginPath(); cx.arc(W - (x + .5) * cs, (y + .5) * cs, rad, 0, 6.283); cx.fill();
     }
+    // pitch ladder: one line per note, in the same space as your mouth
+    cx.font = '700 9px "JetBrains Mono",monospace'; cx.textAlign = 'right';
+    VOX_NOTES.forEach((n, i) => {
+      const y = noteScreenY(i, m), on = i === S.note;
+      cx.strokeStyle = on ? '#ff4f12' : 'rgba(233,233,228,.18)'; cx.lineWidth = on ? 2 : 1;
+      cx.setLineDash(on ? [] : [2, 4]);
+      cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W - 34, y); cx.stroke();
+      cx.fillStyle = on ? '#ff4f12' : '#85857f'; cx.fillText(n.n, W - 8, y + 3);
+    });
+    cx.setLineDash([]); cx.textAlign = 'left';
     if (lips) {
       const pts = a => a.map(i => toScreen(lips[i], m));
       const o = pts(OUTER), inn = pts(INNER);
       let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
       o.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); });
-      // mouth fill
-      cx.fillStyle = 'rgba(255,79,18,.22)';
+      // sound rings from the mouth while singing
+      if (S.vol > .05) {
+        const cxm = (x0 + x1) / 2, cym = (y0 + y1) / 2;
+        for (let k = 0; k < 3; k++) {
+          const ph = ((performance.now() / 600) + k / 3) % 1;
+          cx.strokeStyle = `rgba(255,79,18,${(1 - ph) * S.vol * .8})`; cx.lineWidth = 2;
+          cx.beginPath(); cx.ellipse(cxm, cym, (x1 - x0) * (.6 + ph * 1.6), (y1 - y0) * (.6 + ph * 1.6) + 6, 0, 0, 6.283); cx.stroke();
+        }
+      }
+      cx.fillStyle = `rgba(255,79,18,${.2 + S.vol * .5})`;
       cx.beginPath(); inn.forEach((p, i) => i ? cx.lineTo(p.x, p.y) : cx.moveTo(p.x, p.y)); cx.closePath(); cx.fill();
       cx.lineWidth = 2; cx.strokeStyle = '#ff4f12';
       [o, inn].forEach(a => { cx.beginPath(); a.forEach((p, i) => i ? cx.lineTo(p.x, p.y) : cx.moveTo(p.x, p.y)); cx.closePath(); cx.stroke(); });
       cx.fillStyle = '#fff'; o.forEach(p => cx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3));
-      // lock brackets
-      const pad = 14; x0 -= pad; y0 -= pad; x1 += pad; y1 += pad; const L = 10;
-      cx.strokeStyle = '#fff'; cx.lineWidth = 1.5; cx.beginPath();
-      [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]].forEach(([x, y, a, b]) => { cx.moveTo(x + a * L, y); cx.lineTo(x, y); cx.lineTo(x, y + b * L); });
-      cx.stroke();
-      cx.font = '700 9px "JetBrains Mono",monospace'; cx.fillStyle = '#ff4f12';
-      cx.fillText('MOUTH LOCK', x0, y0 - 5);
+      // vowel tag beside the mouth
+      if (S.vol > .05) {
+        cx.font = '800 22px "Archivo",sans-serif'; cx.fillStyle = '#fff';
+        cx.fillText(VLABEL[topVowel(vw)], x1 + 12, (y0 + y1) / 2 + 8);
+      }
     }
   } else {
-    // idle / touch grid
     cx.strokeStyle = '#1d1d1d'; cx.lineWidth = 1;
     for (let i = 1; i < 8; i++) { cx.beginPath(); cx.moveTo(i * W / 8, 0); cx.lineTo(i * W / 8, H); cx.stroke(); }
     for (let i = 1; i < 6; i++) { cx.beginPath(); cx.moveTo(0, i * H / 6); cx.lineTo(W, i * H / 6); cx.stroke(); }
@@ -552,9 +690,9 @@ function draw(now) {
     cx.textAlign = 'left';
   }
   // scope
-  const sy = H * .8, amp = H * .12;
+  const sy = H * .86, amp = H * .08;
   cx.lineWidth = 2; cx.strokeStyle = '#ff4f12'; cx.beginPath();
-  if (analyser && S.playing) {
+  if (analyser && (S.playing || S.vol > .02)) {
     analyser.getByteTimeDomainData(wave);
     for (let i = 0; i < 512; i++) { const x = i / 511 * W, y = sy + (wave[i] - 128) / 128 * amp * 1.6; i ? cx.lineTo(x, y) : cx.moveTo(x, y); }
   } else {
@@ -564,16 +702,15 @@ function draw(now) {
   cx.stroke();
   // HUD
   cx.font = '700 10px "JetBrains Mono",monospace';
-  cx.fillStyle = '#fff';
-  cx.fillText('CUT ' + fmtHz(cutHz(S.cut)), 10, 18);
-  cx.fillStyle = '#2c56ff'; cx.fillText('RES ' + Math.round(S.res * 99), 10, 32);
-  cx.fillStyle = '#17b863'; cx.fillText('ENV ' + Math.round(S.env * 99), 10, 46);
+  cx.fillStyle = '#fff'; cx.fillText('VOX ' + VOX_NOTES[S.note].n + ' ' + VLABEL[topVowel(vw)], 10, 18);
+  cx.fillStyle = '#2c56ff'; cx.fillText('303 ' + fmtHz(cutHz(S.cut303)), 10, 32);
+  cx.fillStyle = '#17b863'; cx.fillText('ECHO ' + Math.round(S.echo * 99), 10, 46);
   cx.textAlign = 'right'; cx.fillStyle = '#fff';
   cx.fillText(String(Math.max(curStep, 0) + 1).padStart(2, '0') + '/16', W - 10, 18);
   cx.fillStyle = '#85857f'; cx.fillText(Math.round(S.bpm) + ' BPM', W - 10, 32);
   if (camOn) { cx.fillStyle = S.face ? '#ff4f12' : '#85857f'; cx.fillText(S.face ? '● FACE' : '○ SEARCHING', W - 10, 46); }
   if (!S.playing && camOn) { cx.textAlign = 'center'; cx.fillStyle = '#ff4f12'; cx.font = '800 15px "Archivo",sans-serif';
-    cx.fillText('TAP ▶ FOR SOUND', W / 2, H * .66); }
+    cx.fillText('TAP ▶ FOR THE TRACK', W / 2, H * .7); }
   cx.textAlign = 'left';
 }
 function wrap(text, x, y, maxW, lh) {
@@ -585,7 +722,8 @@ function wrap(text, x, y, maxW, lh) {
   if (line) cx.fillText(line, x, y);
 }
 requestAnimationFrame(frame);
-startCam();   // camera is the default: ask straight away
+startCam();
+
 </script>
 </body>
 </html>
