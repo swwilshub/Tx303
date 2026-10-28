@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#cfcfca">
+<title>TX-303 Mouth Acid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --desk:#cfcfca;
+  --body:#ececE8;
+  --ink:#121212;
+  --dim:#85857f;
+  --screen:#0a0a0a;
+  --orange:#ff4f12;
+  --blue:#2c56ff;
+  --green:#17b863;
+  --display:"Archivo","Arial Black",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  /* layout: one aluminium slab, modules stacked on a 4-col grid, numbered like a manual */
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--desk);color:var(--ink);font-family:var(--mono);font-size:11px;
+  display:flex;justify-content:center;align-items:flex-start;
+  padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 24px);
+  color-scheme:light;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;
+  overscroll-behavior:none;
+}
+.device{
+  width:100%;max-width:430px;background:var(--body);border-radius:20px;padding:16px;
+  display:grid;gap:14px;
+  box-shadow:0 1px 0 #fff inset,0 -1px 0 #c4c4bf inset,0 2px 0 #b8b8b3,0 30px 50px -30px rgba(0,0,0,.45);
+}
+.hdr{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:10px}
+.logo{font-family:var(--display);font-weight:800;font-stretch:125%;font-size:34px;line-height:.8;letter-spacing:-.02em}
+.logo sup{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;vertical-align:top;margin-left:2px;color:var(--orange)}
+.hdr .meta{font-size:9px;line-height:1.35;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.hdr .meta b{color:var(--ink);font-weight:700}
+.led{width:8px;height:8px;border-radius:50%;background:#bdbdb7;box-shadow:inset 0 1px 1px rgba(0,0,0,.25);margin-bottom:4px}
+.led.on{background:var(--orange);box-shadow:0 0 8px var(--orange)}
+.mod{display:grid;gap:8px}
+.lbl{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border-top:1px solid #d3d3ce;padding-top:6px}
+.lbl b{color:var(--ink);font-weight:700}
+.screenwrap{position:relative;background:var(--screen);border-radius:10px;padding:6px;
+  box-shadow:inset 0 0 0 1px #000,0 1px 0 #fff}
+canvas#scr{position:relative;z-index:1;display:block;width:100%;aspect-ratio:4/3;border-radius:6px;cursor:pointer}
+video{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12px);object-fit:cover;z-index:0;pointer-events:none}
+.key.err{background:var(--orange);color:#fff}
+.meters{display:grid;gap:6px}
+.meter{display:grid;grid-template-columns:62px 1fr 62px;align-items:center;gap:8px;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.meter .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.bar{height:12px;background:#dcdcd7;border-radius:3px;position:relative;overflow:hidden;box-shadow:inset 0 1px 1px rgba(0,0,0,.12)}
+.bar i{position:absolute;inset:0 auto 0 0;width:30%;background:var(--c)}
+.bar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 5px,#dcdcd7 5px 7px)}
+.knobs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.k{display:grid;justify-items:center;gap:6px;touch-action:none;cursor:ns-resize;outline:none}
+.k .val{font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}
+.k .cap{font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+.dial{width:58px;height:58px;border-radius:50%;position:relative;background:var(--kc);
+  box-shadow:0 0 0 4px #dedeD9,0 0 0 5px #c9c9c4,0 4px 6px rgba(0,0,0,.25),inset 0 -3px 4px rgba(0,0,0,.18),inset 0 2px 2px rgba(255,255,255,.5)}
+.dial::before{content:"";position:absolute;left:50%;top:6px;width:4px;height:14px;margin-left:-2px;border-radius:2px;background:var(--kn,#fff);transform-origin:2px 23px;transform:rotate(var(--r,0deg))}
+.k:focus-visible .dial{box-shadow:0 0 0 4px var(--orange)}
+.k.white .dial{--kc:#fafaf7;--kn:var(--ink)}
+.k.blue .dial{--kc:var(--blue)}
+.k.orange .dial{--kc:var(--orange)}
+.k.green .dial{--kc:var(--green)}
+.steps{display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
+.st{appearance:none;border:0;padding:0;height:40px;border-radius:4px;background:#fafaf7;font:700 8px var(--mono);color:var(--ink);
+  display:grid;grid-template-rows:10px 1fr 6px;justify-items:center;align-items:center;box-shadow:0 1px 0 #b9b9b4;cursor:pointer}
+.st:nth-child(4n+1){background:#f1f1ed}
+.st .d{width:5px;height:5px;border-radius:50%;background:#d0d0ca}
+.st.acc .d{background:var(--ink)}
+.st .s{width:70%;height:2px;border-radius:1px}
+.st.sl .s{background:var(--blue)}
+.st.rest{color:#c3c3bd}
+.st.now{background:var(--orange);color:#fff}
+.st.now .d{background:#fff}
+.st:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.keys{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.key{appearance:none;border:0;border-radius:10px;aspect-ratio:1;background:#fafaf7;cursor:pointer;
+  display:grid;place-items:center;align-content:center;gap:4px;font:700 9px var(--mono);letter-spacing:.08em;color:var(--ink);
+  box-shadow:0 3px 0 #b5b5b0,0 4px 6px rgba(0,0,0,.18);transition:transform .05s,box-shadow .05s}
+.key:active{transform:translateY(2px);box-shadow:0 1px 0 #b5b5b0,0 1px 2px rgba(0,0,0,.2)}
+.key svg{width:22px;height:22px}
+.key.on{background:var(--ink);color:#fff}
+.key.play{background:var(--orange);color:#fff}
+.key.play.on{background:var(--ink)}
+.key:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.legend{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:9px;line-height:1.35;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
+.legend div{border-left:3px solid var(--c);padding-left:6px}
+.legend b{display:block;color:var(--ink)}
+.foot{display:flex;justify-content:space-between;gap:12px;font-size:8.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+@media (prefers-reduced-motion:reduce){.key{transition:none}}
+</style>
+</head>
+<body>
+<main class="device">
+  <header class="hdr">
+    <div class="logo">TX-303<sup>M</sup></div>
+    <div class="meta"><b>Mouth acid synthesizer</b><br>bass line · drum machine · face sensor</div>
+    <div class="led" id="led"></div>
+  </header>
+
+  <section class="mod">
+    <div class="lbl"><span>01 · sensor</span><b id="status">starting camera…</b></div>
+    <div class="screenwrap">
+      <video id="vid" playsinline muted autoplay></video>
+      <canvas id="scr" aria-label="Mouth sensor display. Tap to start."></canvas>
+    </div>
+  </section>
+
+  <section class="mod">
+    <div class="lbl"><span>02 · mouth → 303</span><span id="src">face: —</span></div>
+    <div class="meters">
+      <div class="meter" style="--c:var(--orange)"><span>jaw→cut</span><div class="bar"><i id="m0"></i></div><span class="v" id="v0">—</span></div>
+      <div class="meter" style="--c:var(--blue)"><span>pout→res</span><div class="bar"><i id="m1"></i></div><span class="v" id="v1">—</span></div>
+      <div class="meter" style="--c:var(--green)"><span>smile→env</span><div class="bar"><i id="m2"></i></div><span class="v" id="v2">—</span></div>
+    </div>
+  </section>
+
+  <section class="mod">
+    <div class="lbl"><span>03 · control</span><span>drag ↕</span></div>
+    <div class="knobs">
+      <div class="k white" tabindex="0" data-p="bpm" id="k-bpm"><span class="val"></span><div class="dial"></div><span class="cap">tempo</span></div>
+      <div class="k blue" tabindex="0" data-p="decay" id="k-decay"><span class="val"></span><div class="dial"></div><span class="cap">decay</span></div>
+      <div class="k orange" tabindex="0" data-p="drive" id="k-drive"><span class="val"></span><div class="dial"></div><span class="cap">drive</span></div>
+      <div class="k green" tabindex="0" data-p="delay" id="k-delay"><span class="val"></span><div class="dial"></div><span class="cap">delay</span></div>
+    </div>
+  </section>
+
+  <section class="mod">
+    <div class="lbl"><span>04 · pattern</span><span>tap step = mute · ● accent · <span style="color:var(--blue)">▬</span> slide</span></div>
+    <div class="steps" id="steps"></div>
+  </section>
+
+  <section class="mod">
+    <div class="keys">
+      <button class="key play" id="b-play" aria-label="Play or stop">
+        <svg viewBox="0 0 24 24" id="ico-play"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg><span id="t-play">PLAY</span></button>
+      <button class="key" id="b-rnd" aria-label="New random pattern">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/><circle cx="16" cy="16" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>RND</button>
+      <button class="key on" id="b-drum" aria-label="Drums on or off">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="8" rx="8" ry="3"/><path d="M4 8v8c0 1.7 3.6 3 8 3s8-1.3 8-3V8"/></svg>DRUM</button>
+      <button class="key" id="b-wave" aria-label="Switch saw or square wave">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="ico-wave"><path d="M2 18L10 6v12l8-12v12"/></svg><span id="t-wave">SAW</span></button>
+      <button class="key" id="b-cam" aria-label="Start mouth tracking camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9c3 6 13 6 16 0"/><path d="M4 9c4-2 12-2 16 0"/></svg><span id="t-cam">CAM</span></button>
+    </div>
+  </section>
+
+  <section class="legend">
+    <div style="--c:var(--orange)"><b>open wide</b>filter opens, the wah</div>
+    <div style="--c:var(--blue)"><b>pout / ooh</b>resonance squelch</div>
+    <div style="--c:var(--green)"><b>smile</b>envelope snap</div>
+  </section>
+
+  <footer class="foot"><span>face the camera, good light, mouth in frame</span><span>iphone silent? flip the mute switch</span></footer>
+</main>
+
+<script type="module">
+const $ = s => document.querySelector(s);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/* ---------- state ---------- */
+const S = {
+  cut: .35, res: .6, env: .5,          // smoothed, driven by mouth
+  tCut: .35, tRes: .6, tEnv: .5,       // targets
+  bpm: 132, decay: .4, drive: .45, delay: .3,
+  playing: false, drums: true, wave: 'sawtooth', source: 'touch', face: false,
+};
+const KNOB = {
+  bpm:   { min: 90, max: 160, fmt: v => Math.round(v) },
+  decay: { min: 0, max: 1, fmt: v => Math.round(v * 99) },
+  drive: { min: 0, max: 1, fmt: v => Math.round(v * 99) },
+  delay: { min: 0, max: 1, fmt: v => Math.round(v * 99) },
+};
+const cutHz = c => 70 * Math.pow(60, c);   // 70 Hz → 4.2 kHz
+
+/* ---------- pattern ---------- */
+const NAMES = ['A','A#','B','C','C#','D','D#','E','F','F#','G','G#'];
+const SCALE = [0, 0, 0, 3, 5, 7, 7, 10, 12];
+let pattern = [];
+function genPattern() {
+  pattern = Array.from({ length: 16 }, (_, i) => {
+    const r = Math.random();
+    return {
+      rest: i % 4 !== 0 && Math.random() < .2,
+      n: SCALE[Math.floor(Math.random() * SCALE.length)],
+      oct: r < .2 ? 12 : r < .3 ? -12 : 0,
+      acc: Math.random() < .3,
+      slide: Math.random() < .22,
+    };
+  });
+  renderSteps();
+}
+const stepsEl = $('#steps');
+function renderSteps() {
+  stepsEl.innerHTML = '';
+  pattern.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.className = 'st' + (s.acc ? ' acc' : '') + (s.slide ? ' sl' : '') + (s.rest ? ' rest' : '');
+    b.id = 'st' + i;
+    b.setAttribute('aria-label', `Step ${i + 1}`);
+    const name = NAMES[s.n % 12] + (s.oct > 0 ? '+' : s.oct < 0 ? '-' : '');
+    b.innerHTML = `<span class="d"></span><span>${s.rest ? '·' : name}</span><span class="s"></span>`;
+    b.onclick = () => { s.rest = !s.rest; renderSteps(); };
+    stepsEl.appendChild(b);
+  });
+}
+genPattern();
+
+/* ---------- audio ---------- */
+let ac, osc, f1, f2, vca, envSrc, duck, pre, shaper, post, sendG, dly, fbG, fbF, drumBus, comp, analyser, noiseBuf;
+function curve(k) {
+  const n = 1024, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * k) / Math.tanh(k); }
+  return c;
+}
+function initAudio() {
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  osc = ac.createOscillator(); osc.type = S.wave; osc.frequency.value = 110;
+  f1 = ac.createBiquadFilter(); f1.type = 'lowpass'; f1.Q.value = .7;
+  f2 = ac.createBiquadFilter(); f2.type = 'lowpass';
+  envSrc = ac.createConstantSource(); envSrc.offset.value = 0;
+  envSrc.connect(f1.frequency); envSrc.connect(f2.frequency); envSrc.start();
+  vca = ac.createGain(); vca.gain.value = 0;
+  duck = ac.createGain(); duck.gain.value = 1;
+  pre = ac.createGain();
+  shaper = ac.createWaveShaper(); shaper.oversample = '2x';
+  post = ac.createGain();
+  osc.connect(f1).connect(f2).connect(vca).connect(pre).connect(shaper).connect(post).connect(duck);
+
+  dly = ac.createDelay(2); fbG = ac.createGain(); fbG.gain.value = .42;
+  fbF = ac.createBiquadFilter(); fbF.type = 'lowpass'; fbF.frequency.value = 2200;
+  sendG = ac.createGain();
+  duck.connect(sendG).connect(dly); dly.connect(fbF).connect(fbG).connect(dly);
+
+  drumBus = ac.createGain(); drumBus.gain.value = .9;
+  comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = .004; comp.release.value = .12;
+  const master = ac.createGain(); master.gain.value = .85;
+  analyser = ac.createAnalyser(); analyser.fftSize = 1024;
+  duck.connect(comp); fbF.connect(comp); drumBus.connect(comp);
+  comp.connect(master).connect(analyser).connect(ac.destination);
+
+  noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+  const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  osc.start();
+  applyKnobs();
+}
+function applyKnobs() {
+  if (!ac) return;
+  const k = 1 + S.drive * 9;
+  shaper.curve = curve(k);
+  pre.gain.value = .6 + S.drive * 1.6;
+  post.gain.value = .5 / (.6 + S.drive * .7);
+  sendG.gain.setTargetAtTime(S.delay * .7, ac.currentTime, .05);
+  dly.delayTime.setTargetAtTime(60 / S.bpm * .75, ac.currentTime, .05);
+}
+
+/* drums */
+function kick(t) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.frequency.setValueAtTime(170, t); o.frequency.exponentialRampToValueAtTime(44, t + .11);
+  g.gain.setValueAtTime(1.1, t); g.gain.exponentialRampToValueAtTime(.001, t + .42);
+  o.connect(g).connect(drumBus); o.start(t); o.stop(t + .45);
+  duck.gain.setTargetAtTime(.45, t, .004); duck.gain.setTargetAtTime(1, t + .03, .07);
+}
+function noiseHit(t, type, freq, q, peak, dec, bursts = 1) {
+  const s = ac.createBufferSource(); s.buffer = noiseBuf;
+  const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = ac.createGain(); g.gain.setValueAtTime(0, t);
+  for (let b = 0; b < bursts - 1; b++) {
+    const bt = t + b * .011; g.gain.setValueAtTime(peak, bt); g.gain.exponentialRampToValueAtTime(.05, bt + .009);
+  }
+  const lt = t + (bursts - 1) * .011;
+  g.gain.setValueAtTime(peak, lt); g.gain.exponentialRampToValueAtTime(.001, lt + dec);
+  s.connect(f).connect(g).connect(drumBus);
+  s.start(t, Math.random() * .5); s.stop(lt + dec + .02);
+}
+function drums(i, t) {
+  if (i % 4 === 0) kick(t);
+  if (i === 4 || i === 12) noiseHit(t, 'bandpass', 1300, 1.2, .7, .16, 3);
+  if (i % 4 === 2) noiseHit(t, 'highpass', 7800, .7, .32, .14);
+  else if (i % 2 === 1) noiseHit(t, 'highpass', 9000, .7, .16, .03);
+}
+
+/* scheduler */
+let nextT = 0, sStep = 0, tick = null;
+const queue = [];
+function spb() { return 60 / S.bpm / 4; }
+function scheduleStep(i, t) {
+  const s = pattern[i], prev = pattern[(i + 15) % 16];
+  if (S.drums) drums(i, t);
+  queue.push({ i, t });
+  if (s.rest) { vca.gain.setTargetAtTime(0, t, .006); return; }
+  const f = 440 * Math.pow(2, (45 + s.n + s.oct - 69) / 12);  // root A2
+  const sliding = prev.slide && !prev.rest;
+  if (sliding) osc.frequency.setTargetAtTime(f, t, .028);
+  else osc.frequency.setValueAtTime(f, t);
+  const peak = s.acc ? .95 : .62;
+  vca.gain.setTargetAtTime(peak, t, .002);
+  vca.gain.setTargetAtTime(peak * .7, t + .01, .2);
+  if (!s.slide) vca.gain.setTargetAtTime(0, t + spb() * .62, .01);
+  if (!sliding) {
+    const amt = (250 + S.env * 5200) * (s.acc ? 1.7 : 1);
+    const dec = s.acc ? .06 + S.decay * .18 : .05 + S.decay * .85;
+    envSrc.offset.cancelScheduledValues(t);
+    envSrc.offset.setTargetAtTime(amt, t, .0015);
+    envSrc.offset.setTargetAtTime(0, t + .005, dec / 3);
+  }
+}
+function scheduler() {
+  while (nextT < ac.currentTime + .12) {
+    scheduleStep(sStep, nextT);
+    const sw = .06; nextT += spb() * (sStep % 2 ? 1 - sw : 1 + sw);
+    sStep = (sStep + 1) % 16;
+  }
+}
+async function togglePlay() {
+  if (!ac) initAudio();
+  if (ac.state !== 'running') { try { await ac.resume(); } catch (e) {} }
+  S.playing = !S.playing;
+  if (S.playing) { sStep = 0; nextT = ac.currentTime + .06; tick = setInterval(scheduler, 25); scheduler(); }
+  else { clearInterval(tick); vca.gain.setTargetAtTime(0, ac.currentTime, .01); queue.length = 0; curStep = -1; markStep(); }
+  $('#b-play').classList.toggle('on', S.playing);
+  $('#t-play').textContent = S.playing ? 'STOP' : 'PLAY';
+  $('#ico-play').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" fill="currentColor"/>' : '<path d="M7 4l13 8-13 8z" fill="currentColor"/>';
+  $('#led').classList.toggle('on', S.playing);
+}
+
+/* ---------- UI: keys, knobs ---------- */
+$('#b-play').onclick = () => { if (!camLive) startCam(); togglePlay(); };
+$('#b-rnd').onclick = genPattern;
+$('#b-drum').onclick = e => { S.drums = !S.drums; e.currentTarget.classList.toggle('on', S.drums); };
+$('#b-wave').onclick = () => {
+  S.wave = S.wave === 'sawtooth' ? 'square' : 'sawtooth';
+  if (osc) osc.type = S.wave;
+  $('#t-wave').textContent = S.wave === 'sawtooth' ? 'SAW' : 'SQR';
+  $('#ico-wave').innerHTML = S.wave === 'sawtooth' ? '<path d="M2 18L10 6v12l8-12v12"/>' : '<path d="M2 18h4V6h6v12h6V6h4"/>';
+};
+$('#b-cam').onclick = startCam;
+
+document.querySelectorAll('.k').forEach(el => {
+  const p = el.dataset.p, K = KNOB[p];
+  const norm = () => (S[p] - K.min) / (K.max - K.min);
+  const draw = () => {
+    el.querySelector('.dial').style.setProperty('--r', (norm() * 270 - 135) + 'deg');
+    el.querySelector('.val').textContent = K.fmt(S[p]);
+  };
+  const set = n => { S[p] = K.min + clamp(n) * (K.max - K.min); draw(); applyKnobs(); };
+  let y0 = 0, n0 = 0;
+  el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); y0 = e.clientY; n0 = norm(); });
+  el.addEventListener('pointermove', e => { if (el.hasPointerCapture(e.pointerId)) set(n0 + (y0 - e.clientY) / 160); });
+  el.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { set(norm() + .03); e.preventDefault(); }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { set(norm() - .03); e.preventDefault(); }
+  });
+  draw();
+});
+
+/* ---------- screen ---------- */
+const cv = $('#scr'), cx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  const r = cv.getBoundingClientRect(); W = r.width; H = r.height;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+addEventListener('resize', resize); resize();
+
+/* tap the screen: start camera + sound together */
+cv.addEventListener('click', () => { if (!camLive) startCam(); if (!S.playing) togglePlay(); });
+
+/* ---------- mouth tracking ---------- */
+const vid = $('#vid');
+const small = document.createElement('canvas'); small.width = 56; small.height = 42;
+const sx = small.getContext('2d', { willReadFrequently: true });
+let landmarker = null, lastVT = -1, lips = null, camLive = false, camBusy = false, camErr = null, modelP = null;
+const OUTER = [61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185];
+const INNER = [78,95,88,178,87,14,317,402,318,324,308,415,310,311,312,13,82,81,80,191];
+const VER = '0.10.14';
+const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+const status = t => $('#status').textContent = t;
+
+const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+function camError(title, fix) {
+  camErr = { title, fix }; status(title);
+  $('#b-cam').classList.remove('on'); $('#b-cam').classList.add('err'); $('#t-cam').textContent = 'RETRY';
+}
+function loadModel() {
+  if (!modelP) modelP = (async () => {
+    const v = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}`);
+    const fs = await v.FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/wasm`);
+    const opts = { baseOptions: { modelAssetPath: MODEL, delegate: 'GPU' }, runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true };
+    try { return await v.FaceLandmarker.createFromOptions(fs, opts); }
+    catch (e) { opts.baseOptions.delegate = 'CPU'; return await v.FaceLandmarker.createFromOptions(fs, opts); }
+  })();
+  modelP.catch(() => { modelP = null; });
+  return modelP;
+}
+async function startCam() {
+  if (camLive || camBusy) return;
+  camBusy = true; camErr = null;
+  $('#b-cam').classList.remove('err'); $('#b-cam').classList.add('on'); $('#t-cam').textContent = 'CAM';
+  try {
+    if (!window.isSecureContext) return camError('camera needs https', 'Open this page from an https:// address, not a downloaded file.');
+    if (!navigator.mediaDevices?.getUserMedia) return camError('camera not available', framed ? 'This viewer blocks the camera. Open the hosted page directly in Safari or Chrome.' : 'This browser has no camera access. Try Safari or Chrome.');
+    status('asking for camera…');
+    const model = loadModel();               // download the face model while the permission prompt is up
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    } catch (e) {
+      const n = e && e.name;
+      if (n === 'NotAllowedError' || n === 'SecurityError') {
+        return framed
+          ? camError('camera blocked by this viewer', 'Embedded pages cannot use the camera. Open the hosted page directly in Safari or Chrome.')
+          : camError('camera permission denied', 'Allow camera for this site: tap aA or the lock icon in the address bar, set Camera to Allow, then tap RETRY.');
+      }
+      if (n === 'NotFoundError' || n === 'OverconstrainedError') return camError('no front camera found', 'This device has no usable camera.');
+      if (n === 'NotReadableError') return camError('camera busy', 'Another app is using the camera. Close it, then tap RETRY.');
+      return camError('camera failed', String(e && e.message || e));
+    }
+    vid.srcObject = stream;
+    try { await vid.play(); } catch (e) {}
+    camLive = true;
+    status('loading face model…');
+    try { landmarker = await model; }
+    catch (e) { return camError('face model failed to load', 'Check your connection, then tap RETRY.'); }
+    status('show me your mouth');
+  } finally { camBusy = false; }
+}
+
+function coverMap() {
+  const vw = vid.videoWidth || 4, vh = vid.videoHeight || 3;
+  const sc = Math.max(W / vw, H / vh);
+  return { vw, vh, sc, dx: (W - vw * sc) / 2, dy: (H - vh * sc) / 2 };
+}
+function toScreen(p, m) { return { x: W - (p.x * m.vw * m.sc + m.dx), y: p.y * m.vh * m.sc + m.dy }; }
+
+function track() {
+  if (!landmarker || vid.readyState < 2 || vid.currentTime === lastVT) return;
+  lastVT = vid.currentTime;
+  const r = landmarker.detectForVideo(vid, performance.now());
+  const bs = r.faceBlendshapes?.[0]?.categories;
+  if (!bs || !r.faceLandmarks?.[0]) {
+    if (S.face) status('looking for your face…');
+    S.face = false; lips = null; S.tCut = .12; S.tRes = .4; S.tEnv = .3;   // no face = mouth closed
+    $('#src').textContent = 'face: searching'; return;
+  }
+  if (!S.face) { status('mouth locked'); $('#src').textContent = 'face: locked'; }
+  const g = n => bs.find(c => c.categoryName === n)?.score || 0;
+  const jaw = g('jawOpen'), pucker = g('mouthPucker'), funnel = g('mouthFunnel');
+  const smile = (g('mouthSmileLeft') + g('mouthSmileRight')) / 2;
+  S.face = true;
+  S.tCut = clamp((jaw - .02) / .5);
+  S.tRes = clamp(.25 + pucker * 1.0 + funnel * .6);
+  S.tEnv = clamp(.15 + smile * 1.3);
+  lips = r.faceLandmarks[0];
+}
+
+/* ---------- render loop ---------- */
+let curStep = -1, phase = 0;
+const wave = new Uint8Array(1024);
+function markStep() {
+  document.querySelectorAll('.st.now').forEach(e => e.classList.remove('now'));
+  if (curStep >= 0) $('#st' + curStep)?.classList.add('now');
+}
+function fmtHz(h) { return h >= 1000 ? (h / 1000).toFixed(1) + 'k' : Math.round(h) + ''; }
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  track();
+  // smoothing
+  const k = S.face ? .35 : .18;
+  S.cut = lerp(S.cut, S.tCut, k); S.res = lerp(S.res, S.tRes, k); S.env = lerp(S.env, S.tEnv, k);
+  if (ac) {
+    const t = ac.currentTime;
+    f1.frequency.setTargetAtTime(cutHz(S.cut), t, .02);
+    f2.frequency.setTargetAtTime(cutHz(S.cut), t, .02);
+    f2.Q.setTargetAtTime(.8 + S.res * 17, t, .03);
+    while (queue.length && queue[0].t <= t) { curStep = queue.shift().i; markStep(); }
+  }
+  // meters
+  $('#m0').style.width = S.cut * 100 + '%'; $('#v0').textContent = fmtHz(cutHz(S.cut)) + 'Hz';
+  $('#m1').style.width = S.res * 100 + '%'; $('#v1').textContent = 'Q' + (.8 + S.res * 17).toFixed(1);
+  $('#m2').style.width = S.env * 100 + '%'; $('#v2').textContent = Math.round(S.env * 100) + '%';
+  draw(now);
+}
+
+function draw(now) {
+  cx.fillStyle = '#0a0a0a'; cx.fillRect(0, 0, W, H);
+  const camOn = camLive && vid.readyState >= 2;
+  // dot-matrix camera
+  if (camOn) {
+    const m = coverMap();
+    const cw = W / m.sc, ch = H / m.sc;  // crop in video px
+    sx.drawImage(vid, (m.vw - cw) / 2, (m.vh - ch) / 2, cw, ch, 0, 0, small.width, small.height);
+    const px = sx.getImageData(0, 0, small.width, small.height).data;
+    const cs = W / small.width;
+    cx.fillStyle = '#e9e9e4';
+    for (let y = 0; y < small.height; y++) for (let x = 0; x < small.width; x++) {
+      const i = (y * small.width + x) * 4;
+      const l = (px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11) / 255;
+      const rad = Math.pow(l, 1.4) * cs * .48;
+      if (rad < .35) continue;
+      cx.beginPath(); cx.arc(W - (x + .5) * cs, (y + .5) * cs, rad, 0, 6.283); cx.fill();
+    }
+    if (lips) {
+      const pts = a => a.map(i => toScreen(lips[i], m));
+      const o = pts(OUTER), inn = pts(INNER);
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      o.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); });
+      // mouth fill
+      cx.fillStyle = 'rgba(255,79,18,.22)';
+      cx.beginPath(); inn.forEach((p, i) => i ? cx.lineTo(p.x, p.y) : cx.moveTo(p.x, p.y)); cx.closePath(); cx.fill();
+      cx.lineWidth = 2; cx.strokeStyle = '#ff4f12';
+      [o, inn].forEach(a => { cx.beginPath(); a.forEach((p, i) => i ? cx.lineTo(p.x, p.y) : cx.moveTo(p.x, p.y)); cx.closePath(); cx.stroke(); });
+      cx.fillStyle = '#fff'; o.forEach(p => cx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3));
+      // lock brackets
+      const pad = 14; x0 -= pad; y0 -= pad; x1 += pad; y1 += pad; const L = 10;
+      cx.strokeStyle = '#fff'; cx.lineWidth = 1.5; cx.beginPath();
+      [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]].forEach(([x, y, a, b]) => { cx.moveTo(x + a * L, y); cx.lineTo(x, y); cx.lineTo(x, y + b * L); });
+      cx.stroke();
+      cx.font = '700 9px "JetBrains Mono",monospace'; cx.fillStyle = '#ff4f12';
+      cx.fillText('MOUTH LOCK', x0, y0 - 5);
+    }
+  } else {
+    // idle / touch grid
+    cx.strokeStyle = '#1d1d1d'; cx.lineWidth = 1;
+    for (let i = 1; i < 8; i++) { cx.beginPath(); cx.moveTo(i * W / 8, 0); cx.lineTo(i * W / 8, H); cx.stroke(); }
+    for (let i = 1; i < 6; i++) { cx.beginPath(); cx.moveTo(0, i * H / 6); cx.lineTo(W, i * H / 6); cx.stroke(); }
+    cx.textAlign = 'center';
+    if (camErr) {
+      cx.fillStyle = '#ff4f12'; cx.font = '800 16px "Archivo",sans-serif';
+      cx.fillText(camErr.title.toUpperCase(), W / 2, H * .3);
+      cx.fillStyle = '#e9e9e4'; cx.font = '400 11px "JetBrains Mono",monospace';
+      wrap(camErr.fix, W / 2, H * .3 + 24, W - 40, 15);
+    } else {
+      cx.fillStyle = '#e9e9e4'; cx.font = '800 16px "Archivo",sans-serif';
+      cx.fillText(camBusy ? 'WAITING FOR CAMERA' : 'TAP TO START', W / 2, H * .34);
+      cx.fillStyle = '#85857f'; cx.font = '400 11px "JetBrains Mono",monospace';
+      cx.fillText(camBusy ? 'allow camera when asked' : 'camera + sound', W / 2, H * .34 + 22);
+    }
+    cx.textAlign = 'left';
+  }
+  // scope
+  const sy = H * .8, amp = H * .12;
+  cx.lineWidth = 2; cx.strokeStyle = '#ff4f12'; cx.beginPath();
+  if (analyser && S.playing) {
+    analyser.getByteTimeDomainData(wave);
+    for (let i = 0; i < 512; i++) { const x = i / 511 * W, y = sy + (wave[i] - 128) / 128 * amp * 1.6; i ? cx.lineTo(x, y) : cx.moveTo(x, y); }
+  } else {
+    phase += .03;
+    for (let i = 0; i <= 120; i++) { const x = i / 120 * W, y = sy + Math.sin(i * .25 + phase) * amp * .25; i ? cx.lineTo(x, y) : cx.moveTo(x, y); }
+  }
+  cx.stroke();
+  // HUD
+  cx.font = '700 10px "JetBrains Mono",monospace';
+  cx.fillStyle = '#fff';
+  cx.fillText('CUT ' + fmtHz(cutHz(S.cut)), 10, 18);
+  cx.fillStyle = '#2c56ff'; cx.fillText('RES ' + Math.round(S.res * 99), 10, 32);
+  cx.fillStyle = '#17b863'; cx.fillText('ENV ' + Math.round(S.env * 99), 10, 46);
+  cx.textAlign = 'right'; cx.fillStyle = '#fff';
+  cx.fillText(String(Math.max(curStep, 0) + 1).padStart(2, '0') + '/16', W - 10, 18);
+  cx.fillStyle = '#85857f'; cx.fillText(Math.round(S.bpm) + ' BPM', W - 10, 32);
+  if (camOn) { cx.fillStyle = S.face ? '#ff4f12' : '#85857f'; cx.fillText(S.face ? '● FACE' : '○ SEARCHING', W - 10, 46); }
+  if (!S.playing && camOn) { cx.textAlign = 'center'; cx.fillStyle = '#ff4f12'; cx.font = '800 15px "Archivo",sans-serif';
+    cx.fillText('TAP ▶ FOR SOUND', W / 2, H * .66); }
+  cx.textAlign = 'left';
+}
+function wrap(text, x, y, maxW, lh) {
+  const words = text.split(' '); let line = '';
+  for (const w of words) {
+    const t = line ? line + ' ' + w : w;
+    if (cx.measureText(t).width > maxW && line) { cx.fillText(line, x, y); y += lh; line = w; } else line = t;
+  }
+  if (line) cx.fillText(line, x, y);
+}
+requestAnimationFrame(frame);
+startCam();   // camera is the default: ask straight away
+</script>
+</body>
+</html>
