@@ -507,7 +507,7 @@ async function startCam() {
   $('#b-cam').classList.remove('err'); $('#b-cam').classList.add('on'); $('#t-cam').textContent = 'CAM';
   try {
     if (!window.isSecureContext) return camError('camera needs https', 'Open this page from an https:// address, not a downloaded file.');
-    if (!navigator.mediaDevices?.getUserMedia) return camError('camera not available', framed ? 'This viewer blocks the camera. Open swwilshub.github.io/tx303 in Chrome or Safari.' : 'This browser has no camera access. Try Chrome or Safari.');
+    if (!navigator.mediaDevices?.getUserMedia) return camError('camera not available', framed ? 'This viewer blocks the camera. Open swwilshub.github.io/Tx303 in Chrome or Safari.' : 'This browser has no camera access. Try Chrome or Safari.');
     status('asking for camera…');
     const model = loadModel();
     let stream;
@@ -517,7 +517,7 @@ async function startCam() {
       const n = e && e.name;
       if (n === 'NotAllowedError' || n === 'SecurityError') {
         return framed
-          ? camError('camera blocked by this viewer', 'Embedded pages cannot use the camera. Open swwilshub.github.io/tx303 in Chrome or Safari.')
+          ? camError('camera blocked by this viewer', 'Embedded pages cannot use the camera. Open swwilshub.github.io/Tx303 in Chrome or Safari.')
           : camError('camera permission denied', 'Tap the icon left of the address, set Camera to Allow, then tap RETRY.');
       }
       if (n === 'NotFoundError' || n === 'OverconstrainedError') return camError('no front camera found', 'This device has no usable camera.');
